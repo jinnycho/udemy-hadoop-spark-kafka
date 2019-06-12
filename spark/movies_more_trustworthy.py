@@ -41,10 +41,14 @@ if __name__ == "__main__":
     # Convert to a DF
     movieDataset = spark.createDataFrame(movieRatings)
 
-    ratingsCount = movieDataset.groupBy("movieID").count().filter("count > 10")
+    averageRatings = movieDataset.groupBy("movieID").avg("rating")
+    counts = movieDataset.groupBy("movieID").count()
+
+    averagesAndCounts = counts.join(averageRatings, "movieID")
+    popularAveragesAndCounts = averagesAndCounts.filter("count > 10")
 
     # Take top 10
-    results = averagesAndCounts.orderBy("avg(rating)").take(10)
+    results = popularAveragesAndCounts.orderBy("avg(rating)").take(10)
 
     for result in results:
         print(movieNames[result[0]], result[1], result[2])
