@@ -12,7 +12,7 @@ ratings.create('rating') # Creates Column Family on a given table
 
 #-----------------------------------
 print ("Parsing ml-100k ratings data...\n")
-ratingFile = open("/home/maria_dev/ml-100k/u.data", "r")
+ratingFile = open("/Users/jinnycho/Documents/downloads2/ml-100k/u.data", "r")
 
 batch = ratings.batch() # starbase interface has batch function
 
