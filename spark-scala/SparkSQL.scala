@@ -34,6 +34,7 @@ object SparkSQL {
     val people = lines.map(mapper)
 
     // Infer the schema, and register the DataSet as a table.
+    // it is necessary whenever we convert to DS etc
     import spark.implicits._
     val schemaPeople = people.toDS
 
