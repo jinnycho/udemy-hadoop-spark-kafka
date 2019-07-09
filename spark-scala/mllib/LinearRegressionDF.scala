@@ -22,7 +22,7 @@ object LinearRegressionDataFrame {
       .builder
       .appName("LinearRegressionDF")
       .master("local[*]")
-      .config("spark.sql.warehouse.dir", "file:///C:/temp") // Necessary to work around a Windows bug in Spark 2.0.0; omit if you're not on Windows.
+      //.config("spark.sql.warehouse.dir", "file:///C:/temp") // Necessary to work around a Windows bug in Spark 2.0.0; omit if you're not on Windows.
       .getOrCreate()
 
     // Load up our page speed / amount spent data in the format required by MLLib
@@ -36,7 +36,7 @@ object LinearRegressionDataFrame {
     val data = inputLines.map(_.split(",")).map(x => (x(0).toDouble, Vectors.dense(x(1).toDouble)))
 
     // Convert this RDD to a DataFrame
-    import spark.implicits._
+    import spark.implicits._ // to be able to infer the schema
     val colNames = Seq("label", "features")
     val df = data.toDF(colNames: _*)
 
@@ -51,7 +51,7 @@ object LinearRegressionDataFrame {
 
     // Now create our linear regression model
     val lir = new LinearRegression()
-      .setRegParam(0.3) // regularization
+      .setRegParam(0.3) // regularization 
       .setElasticNetParam(0.8) // elastic net mixing
       .setMaxIter(100) // max iterations
       .setTol(1E-6) // convergence tolerance
