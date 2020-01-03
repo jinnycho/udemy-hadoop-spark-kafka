@@ -22,21 +22,23 @@ public class ProducerDemoWithCallback {
         // key, value = string
         KafkaProducer<String, String> producer = new KafkaProducer<String, String>(properties);
 
-        // create producer record
-        ProducerRecord<String, String> record = new ProducerRecord<String, String>("first_topic", "hello world");
+        for (int i = 0; i < 5; i++) {
+            // create producer record
+            ProducerRecord<String, String> record = new ProducerRecord<String, String>("first_topic", "hello world");
 
-        // send data - async
-        producer.send(record, new Callback() {
-            public void onCompletion(RecordMetadata recordMetadata, Exception e) {
-                // executed every time record is successfully sent or exception is thrown
-                if (e == null) {
-                    // the record is sent successfully
-                    logger.info("Received new metadata: \n" + "Topic: " + recordMetadata.topic() + "\n" + "Partition: " + recordMetadata.partition() + "\n" + "Offset: " + recordMetadata.offset() + "\n" + "Timestamp: " + recordMetadata.timestamp());
-                } else {
-                    logger.error("Error while producing.");
+            // send data - async
+            producer.send(record, new Callback() {
+                public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+                    // executed every time record is successfully sent or exception is thrown
+                    if (e == null) {
+                        // the record is sent successfully
+                        logger.info("Received new metadata: \n" + "Topic: " + recordMetadata.topic() + "\n" + "Partition: " + recordMetadata.partition() + "\n" + "Offset: " + recordMetadata.offset() + "\n" + "Timestamp: " + recordMetadata.timestamp() + "\n");
+                    } else {
+                        logger.error("Error while producing.");
+                    }
                 }
-            }
-        });
+            });
+        }
         producer.flush();
         producer.close();
     }
