@@ -27,6 +27,7 @@ public class ProducerDemoWithKeys {
             String topic = "first_topic";
             String value = "what's up world" + Integer.toString(i);
             String key = "id_" + Integer.toString(i);
+            // The same key goes to the same partition
             // id_0 -> partition 1
             // id_1 -> partition 0
             // id_2 -> partition 2
