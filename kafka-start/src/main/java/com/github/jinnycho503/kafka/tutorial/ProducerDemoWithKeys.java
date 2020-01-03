@@ -6,10 +6,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Properties;
+import java.util.concurrent.ExecutionException;
 
-public class ProducerDemoWithCallback {
-    public static void main(String[] args) {
-        final Logger logger = LoggerFactory.getLogger(ProducerDemoWithCallback.class);
+public class ProducerDemoWithKeys {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        final Logger logger = LoggerFactory.getLogger(ProducerDemoWithKeys.class);
 
         String bootstrapServersAddr = "127.0.0.1:9092";
         // create Producer properties
@@ -23,8 +24,19 @@ public class ProducerDemoWithCallback {
         KafkaProducer<String, String> producer = new KafkaProducer<String, String>(properties);
 
         for (int i = 0; i < 5; i++) {
+            String topic = "first_topic";
+            String value = "what's up world" + Integer.toString(i);
+            String key = "id_" + Integer.toString(i);
+            // id_0 -> partition 1
+            // id_1 -> partition 0
+            // id_2 -> partition 2
+            // id_3 -> partition 0
+            // id_4 -> partition 2
+
             // create producer record
-            ProducerRecord<String, String> record = new ProducerRecord<String, String>("first_topic", "hello world" + i);
+            ProducerRecord<String, String> record = new ProducerRecord<String, String>(topic, key, value);
+
+            logger.info("Key: " + key);
 
             // send data - async
             producer.send(record, new Callback() {
@@ -37,7 +49,7 @@ public class ProducerDemoWithCallback {
                         logger.error("Error while producing.");
                     }
                 }
-            });
+            }).get(); // block .send() to make it sync (don't do in production)
         }
         producer.flush();
         producer.close();
