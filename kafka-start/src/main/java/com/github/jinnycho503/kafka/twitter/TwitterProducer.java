@@ -10,8 +10,7 @@ import com.twitter.hbc.core.endpoint.StatusesFilterEndpoint;
 import com.twitter.hbc.core.processor.StringDelimitedProcessor;
 import com.twitter.hbc.httpclient.auth.Authentication;
 import com.twitter.hbc.httpclient.auth.OAuth1;
-import org.apache.kafka.clients.producer.KafkaProducer;
-import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +19,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public class TwitterProducer {
     public static void main(String[] args) {
@@ -27,11 +27,40 @@ public class TwitterProducer {
     }
 
     public void run() {
+        final Logger logger = LoggerFactory.getLogger(TwitterProducer.class);
+
         BlockingQueue<String> msgQueue = new LinkedBlockingQueue<String>(100);
         KafkaProducer<String, String> kafkaProducer = createKafkaProducer();
         Client twitterClient = createTwitterClient(msgQueue);
         twitterClient.connect();
 
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            logger.info("--- Stopping application ---");
+            twitterClient.stop();
+            kafkaProducer.close();
+            logger.info("--- Done stopping application ---");
+        }));
+
+        while (!twitterClient.isDone()) {
+            String twitterMsg = null;
+            try {
+                twitterMsg = msgQueue.poll(5, TimeUnit.SECONDS);
+                ProducerRecord<String, String> record = new ProducerRecord<String, String>("twitter_topic", twitterMsg);
+                kafkaProducer.send(record, new Callback() {
+                    @Override
+                    public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+                        if (e == null) {
+                            logger.info("Successfully Received new metadata: \n" + "Topic: " + recordMetadata.topic() + "\n" + "Partition: " + recordMetadata.partition() + "\n" + "Offset: " + recordMetadata.offset() + "\n" + "Timestamp: " + recordMetadata.timestamp() + "\n");
+                        } else {
+                            logger.error("Error while producing tweets");
+                        }
+                    }
+                });
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+                twitterClient.stop();
+            }
+        }
     }
 
     public Client createTwitterClient(BlockingQueue<String> msgQueue) {
@@ -59,8 +88,6 @@ public class TwitterProducer {
     }
 
     public KafkaProducer<String, String> createKafkaProducer() {
-        final Logger logger = LoggerFactory.getLogger(TwitterProducer.class);
-
         // Producer Properties
         String bootstrapServerAddr = "127.0.0.1:9092";
         Properties properties = new Properties();
