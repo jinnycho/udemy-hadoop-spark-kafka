@@ -22,6 +22,12 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 public class TwitterProducer {
+    String consumerKey = "dS4U9f2EbmsctsIp1LGsYhPHN";
+    String consumerSecret = "A9uhXRWiMBRUvnM6KmmZgkJp6fse2d5tgJVFy7qIttDipfwfV5";
+    String token = "3004406534-iQC8JDHeePjUe3A4vu1glyMa7lVxXViDWm19cEc";
+    String secret = "U4Gcy4tKR08NJcPvSfL2mM0agCBTYLFgihIO3f4ZzJ10z";
+    List<String> terms = Lists.newArrayList("cat");
+
     public static void main(String[] args) {
         new TwitterProducer().run();
     }
@@ -29,36 +35,42 @@ public class TwitterProducer {
     public void run() {
         final Logger logger = LoggerFactory.getLogger(TwitterProducer.class);
 
-        BlockingQueue<String> msgQueue = new LinkedBlockingQueue<String>(100);
-        KafkaProducer<String, String> kafkaProducer = createKafkaProducer();
+        // 1. Create a twitter client
+        BlockingQueue<String> msgQueue = new LinkedBlockingQueue<String>(1000);
         Client twitterClient = createTwitterClient(msgQueue);
         twitterClient.connect();
 
+        // 2. Create a kafka producer
+        KafkaProducer<String, String> producer = createKafkaProducer();
+
+        // 3. add a shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            logger.info("--- Stopping application ---");
+            logger.info("Stopping twitter client....");
             twitterClient.stop();
-            kafkaProducer.close();
-            logger.info("--- Done stopping application ---");
+            logger.info("Stopping producer....");
+            producer.close();
+            logger.info("Done closing!");
         }));
 
+        // 4. Loop to send tweets to kafka
         while (!twitterClient.isDone()) {
             String twitterMsg = null;
             try {
                 twitterMsg = msgQueue.poll(5, TimeUnit.SECONDS);
-                ProducerRecord<String, String> record = new ProducerRecord<String, String>("twitter_topic", twitterMsg);
-                kafkaProducer.send(record, new Callback() {
-                    @Override
-                    public void onCompletion(RecordMetadata recordMetadata, Exception e) {
-                        if (e == null) {
-                            logger.info("Successfully Received new metadata: \n" + "Topic: " + recordMetadata.topic() + "\n" + "Partition: " + recordMetadata.partition() + "\n" + "Offset: " + recordMetadata.offset() + "\n" + "Timestamp: " + recordMetadata.timestamp() + "\n");
-                        } else {
-                            logger.error("Error while producing tweets");
-                        }
-                    }
-                });
             } catch (InterruptedException e) {
                 e.printStackTrace();
                 twitterClient.stop();
+            }
+            if (twitterMsg != null) {
+                logger.info(twitterMsg);
+                producer.send(new ProducerRecord<>("twitter_topic", null, twitterMsg), new Callback() {
+                    @Override
+                    public void onCompletion(RecordMetadata recordMetadata, Exception e) {
+                        if (e != null) {
+                            logger.error("Something bad happened", e);
+                        }
+                    }
+                });
             }
         }
     }
@@ -67,13 +79,8 @@ public class TwitterProducer {
         // Declare the connection information
         Hosts hosebirdHosts = new HttpHosts(Constants.STREAM_HOST);
         StatusesFilterEndpoint hosebirdEndpoint = new StatusesFilterEndpoint();
-        List<String> terms = Lists.newArrayList("dog", "cat");
         hosebirdEndpoint.trackTerms(terms);
 
-        String consumerKey = "dS4U9f2EbmsctsIp1LGsYhPHN";
-        String consumerSecret = "A9uhXRWiMBRUvnM6KmmZgkJp6fse2d5tgJVFy7qIttDipfwfV5";
-        String token = "3004406534-iQC8JDHeePjUe3A4vu1glyMa7lVxXViDWm19cEc";
-        String secret = "U4Gcy4tKR08NJcPvSfL2mM0agCBTYLFgihIO3f4ZzJ10z";
         Authentication hosebirdAuth = new OAuth1(consumerKey, consumerSecret, token, secret);
 
         ClientBuilder builder = new ClientBuilder()
