@@ -6,6 +6,7 @@
 
     <groupId>com.github.jinnycho503</groupId>
     <artifactId>kafka-start-course</artifactId>
+    <packaging>pom</packaging>
     <version>1.0</version>
     <build>
         <plugins>
@@ -19,36 +20,9 @@
             </plugin>
         </plugins>
     </build>
+    <modules>
+        <module>kafka-basics</module>
+        <module>kafka-producer-twitter</module>
+    </modules>
 
-    <dependencies>
-        <!-- https://mvnrepository.com/artifact/org.apache.kafka/kafka-clients -->
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka-clients</artifactId>
-            <version>2.4.0</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-simple -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <version>1.7.25</version>
-            <!-- <scope>test</scope> -->
-        </dependency>
-
-        <!-- use a msg queue which the consumer can poll for the raw string messages -->
-        <dependency>
-            <groupId>com.twitter</groupId>
-            <artifactId>hbc-core</artifactId> <!-- or hbc-twitter4j -->
-            <version>2.2.0</version> <!-- or whatever the latest version is -->
-        </dependency>
-
-        <!-- Elasticsearch Java REST client -->
-        <dependency>
-            <groupId>org.elasticsearch.client</groupId>
-            <artifactId>elasticsearch-rest-high-level-client</artifactId>
-            <version>6.4.3</version>
-        </dependency>
-
-    </dependencies>
 </project>
