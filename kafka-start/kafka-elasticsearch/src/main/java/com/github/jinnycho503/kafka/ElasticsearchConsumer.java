@@ -12,6 +12,8 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.elasticsearch.action.bulk.BulkRequest;
+import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.client.RequestOptions;
@@ -38,6 +40,10 @@ public class ElasticsearchConsumer {
 
         while (true) {
             ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
+            logger.info("received " + records.count() + " records");
+
+            BulkRequest bulkRequest = new BulkRequest();
+
             for (ConsumerRecord<String, String> record: records) {
                 // 2 strategies to make our consumer idempotent
                 // approach 1
@@ -52,11 +58,11 @@ public class ElasticsearchConsumer {
                         id // this is to make our consumer idempotent
                 ).source(record.value(), XContentType.JSON);
 
-
-                IndexResponse indexResponse = client.index(indexRequest, RequestOptions.DEFAULT);
-                logger.info(id);
+                bulkRequest.add(indexRequest); //add to our bulk request
             }
-
+            BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+            logger.info("Committing offsets...");
+            consumer.commitSync();
         }
 //        client.close();
     }
@@ -79,6 +85,8 @@ public class ElasticsearchConsumer {
         properties.setProperty(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
         properties.setProperty(ConsumerConfig.GROUP_ID_CONFIG, groupId);
         properties.setProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        properties.setProperty(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "false"); // disable auto commit of offsets
+        properties.setProperty(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, "10");
 
         KafkaConsumer<String, String> consumer = new KafkaConsumer<String, String>(properties);
 
@@ -86,9 +94,9 @@ public class ElasticsearchConsumer {
     }
 
     public static RestHighLevelClient createClient() {
-        String hostname = "";
-        String username = "";
-        String password = "";
+        String hostname = "kafka-practice-8589474430.us-east-1.bonsaisearch.net";
+        String username = "yyezo0p8nh";
+        String password = "qws6hsoqrs";
 
         final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
         credentialsProvider.setCredentials(AuthScope.ANY,
