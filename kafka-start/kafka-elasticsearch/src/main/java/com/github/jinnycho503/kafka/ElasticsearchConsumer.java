@@ -11,6 +11,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.security.auth.SslAuthenticationContext;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -40,7 +41,8 @@ public class ElasticsearchConsumer {
 
         while (true) {
             ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
-            logger.info("received " + records.count() + " records");
+            Integer recordCount = records.count();
+            logger.info("Received " + recordCount + " records.");
 
             BulkRequest bulkRequest = new BulkRequest();
 
@@ -60,9 +62,11 @@ public class ElasticsearchConsumer {
 
                 bulkRequest.add(indexRequest); //add to our bulk request
             }
-            BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
-            logger.info("Committing offsets...");
-            consumer.commitSync();
+            if (recordCount > 0) {
+                BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+                logger.info("Committing offsets...");
+                consumer.commitSync();
+            }
         }
 //        client.close();
     }
